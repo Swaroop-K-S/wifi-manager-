@@ -15,6 +15,7 @@ from backend.sentinel_ai import sentinel_ai
 from backend.scheduler import god_scheduler
 from backend.device_fingerprinter import device_fingerprinter
 from backend.scapy_engine import live_sniffer
+from backend.packet_shaper import packet_shaper
 
 class TrafficEngine:
     def __init__(self):
@@ -295,6 +296,11 @@ class TrafficEngine:
             live_sniffer.start()
         except Exception as e:
             print("Scapy live sniffer start error:", e)
+
+        try:
+            packet_shaper.start()
+        except Exception as e:
+            print("Kernel packet shaper start error:", e)
 
         try:
             god_scheduler.start_loop()

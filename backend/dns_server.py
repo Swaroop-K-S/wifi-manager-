@@ -32,8 +32,8 @@ def parse_dns_domain(data: bytes, offset: int = 12) -> tuple:
     except Exception:
         return "", curr
 
-def build_blocked_response(query_data: bytes, query_domain: str) -> bytes:
-    """Builds a DNS response pointing to 0.0.0.0 for blocked targets (Sinkhole)."""
+def build_blocked_response(query_data: bytes, query_domain: str, redirect_ip: str = "127.0.0.1") -> bytes:
+    """Builds a DNS response redirecting blocked clients to the Captive Portal IP."""
     if len(query_data) < 12:
         return query_data
     # Transaction ID (2 bytes)
@@ -47,9 +47,22 @@ def build_blocked_response(query_data: bytes, query_domain: str) -> bytes:
     _, q_end = parse_dns_domain(query_data, 12)
     question = query_data[12:q_end + 4] # domain + QTYPE + QCLASS
     
-    # Answer record: Name pointer to question (0xc00c), Type A (0x0001), Class IN (0x0001), TTL=60s, Len=4, IP=0.0.0.0
-    answer = b"\xc0\x0c\x00\x01\x00\x01\x00\x00\x00\x3c\x00\x04\x00\x00\x00\x00"
+    # Answer record: Name pointer (0xc00c), Type A, Class IN, TTL=60s, RDLen=4, IP=redirect_ip
+    ip_bytes = socket.inet_aton(redirect_ip)
+    answer = b"\xc0\x0c\x00\x01\x00\x01\x00\x00\x00\x3c\x00\x04" + ip_bytes
     return tx_id + flags + counts + question + answer
+
+def _detect_lan_ip() -> str:
+    """Detect the machine's primary LAN IP for captive portal redirect."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
 
 class LiveDNSServer:
     def __init__(self, host: str = "0.0.0.0", port: int = 53):
@@ -60,6 +73,9 @@ class LiveDNSServer:
         self.thread = None
         self.query_callback: Optional[Callable] = None
         self.blacklist_checker: Optional[Callable] = None
+        # LAN IP of this machine — blocked DNS queries resolve here so clients
+        # land on the AetherShield Captive Portal instead of 0.0.0.0 (black hole)
+        self.redirect_ip: str = _detect_lan_ip()
 
     def start(self, query_callback: Callable = None, blacklist_checker: Callable = None):
         """Starts the live UDP DNS listener."""
@@ -109,8 +125,8 @@ class LiveDNSServer:
                 print("[DNS SERVER] Callback error:", e)
 
         if is_blocked:
-            # Drop or return sinkhole 0.0.0.0
-            resp = build_blocked_response(data, domain)
+            # Redirect blocked queries to Captive Portal instead of 0.0.0.0
+            resp = build_blocked_response(data, domain, redirect_ip=self.redirect_ip)
             try:
                 self.sock.sendto(resp, client_addr)
             except Exception:

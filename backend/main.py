@@ -14,6 +14,7 @@ from typing import Optional
 from backend.database import get_db
 from backend.traffic_engine import traffic_engine
 from backend.captive_portal import captive_app
+from backend.packet_shaper import packet_shaper
 
 app = FastAPI(title="Wi-Fi God Mode Command Center (Primary & Guest)", version="2.2")
 
@@ -97,6 +98,7 @@ async def toggle_device_block(mac: str):
     cursor.execute("UPDATE devices SET is_blocked = ? WHERE mac = ?", (new_state, mac))
     conn.commit()
     conn.close()
+    packet_shaper.force_sync()
     
     dev_name = row["custom_name"] or row["hostname"]
     action_text = "BLOCKED" if new_state == 1 else "UNBLOCKED"
@@ -116,6 +118,7 @@ async def toggle_device_pause(mac: str):
     cursor.execute("UPDATE devices SET is_paused = ? WHERE mac = ?", (new_state, mac))
     conn.commit()
     conn.close()
+    packet_shaper.force_sync()
     
     dev_name = row["custom_name"] or row["hostname"]
     state_str = "PAUSED" if new_state == 1 else "RESUMED"
@@ -138,6 +141,7 @@ async def set_bandwidth_limit(mac: str, req: DeviceLimitRequest):
     cursor.execute("UPDATE devices SET bandwidth_limit_kbps = ? WHERE mac = ?", (req.limit_kbps, mac))
     conn.commit()
     conn.close()
+    packet_shaper.force_sync()
     return {"status": "success", "mac": mac, "limit_kbps": req.limit_kbps}
 
 @app.post("/api/devices/{mac}/lag")
@@ -148,6 +152,7 @@ async def set_device_lag(mac: str, req: DeviceLagRequest):
     cursor.execute("UPDATE devices SET artificial_latency_ms = ? WHERE mac = ?", (req.latency_ms, mac))
     conn.commit()
     conn.close()
+    packet_shaper.force_sync()
     return {"status": "success", "mac": mac, "artificial_latency_ms": req.latency_ms}
 
 class DeviceTypeRequest(BaseModel):
@@ -325,6 +330,7 @@ async def toggle_emergency_killswitch():
         
     conn.commit()
     conn.close()
+    packet_shaper.force_sync()
     return {"status": "success", "killswitch_active": state, "message": f"God Mode Kill Switch {action}"}
 
 # God Rules & Chronos Schedules Endpoints
