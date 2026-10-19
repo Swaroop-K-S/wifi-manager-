@@ -16,6 +16,7 @@ from backend.scheduler import god_scheduler
 from backend.device_fingerprinter import device_fingerprinter
 from backend.scapy_engine import live_sniffer
 from backend.packet_shaper import packet_shaper
+from backend.captive_portal import start_port80_redirector
 
 class TrafficEngine:
     def __init__(self):
@@ -303,6 +304,11 @@ class TrafficEngine:
             print("Kernel packet shaper start error:", e)
 
         try:
+            start_port80_redirector(redirect_port=8000)
+        except Exception as e:
+            print("Port-80 redirector start error:", e)
+
+        try:
             god_scheduler.start_loop()
         except Exception as e:
             print("God scheduler startup error:", e)
@@ -355,11 +361,13 @@ class TrafficEngine:
             d["latency_ms"] = rates.get("latency_ms", d.get("latency_ms", 2))
             d["packet_count"] = rates.get("packet_count", 0)
                 
-            # Sentinel AI behavioral inference
+            # Sentinel AI behavioral inference (fused with DPI app telemetry)
             d["sentinel"] = sentinel_ai.analyze_device_traffic(
                 ip=d["ip"],
                 current_dl_kbps=d["current_dl_kbps"],
-                current_ul_kbps=d["current_ul_kbps"]
+                current_ul_kbps=d["current_ul_kbps"],
+                detected_app=rates.get("current_app"),
+                last_domain=rates.get("last_domain"),
             )
 
             if d.get("network_type") == "guest":

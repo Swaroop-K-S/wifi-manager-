@@ -259,16 +259,18 @@ class KernelPacketShaper:
                     # ── Block / Pause Enforcement ──────────────────────────
                     if pol["blocked"]:
                         # Always allow DNS (UDP 53) so our sinkhole can respond
+                        # Always allow TCP 80  so the port-80 redirector returns a 302
                         # Always allow TCP 8000 so the captive portal page loads
                         src_port = getattr(packet, "src_port", None)
                         dst_port = getattr(packet, "dst_port", None)
                         is_udp   = packet.udp is not None if hasattr(packet, "udp") else False
                         is_tcp   = packet.tcp is not None if hasattr(packet, "tcp") else False
 
-                        dns_pass = is_udp and (src_port == 53 or dst_port == 53)
-                        cap_pass = is_tcp and (src_port == 8000 or dst_port == 8000)
+                        dns_pass  = is_udp and (src_port == 53 or dst_port == 53)
+                        http_pass = is_tcp and (src_port == 80  or dst_port == 80)
+                        cap_pass  = is_tcp and (src_port == 8000 or dst_port == 8000)
 
-                        if dns_pass or cap_pass:
+                        if dns_pass or http_pass or cap_pass:
                             w.send(packet)
                         # else: drop silently (no send)
                         continue

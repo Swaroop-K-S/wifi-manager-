@@ -1,9 +1,94 @@
 """
 Captive Lockout Portal Server
 Serves a custom cyber-styled Quarantine / Bedtime Lockout screen to blocked devices.
+Also runs a lightweight port-80 redirect listener that bounces any blocked browser
+request to the AetherShield captive portal page (port 8000).
 """
+import socket
+import threading
+import logging
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
+
+log = logging.getLogger("CaptivePortal")
+
+
+def _detect_lan_ip() -> str:
+    """Returns machine's LAN IP for use in the 302 Location header."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+
+def start_port80_redirector(redirect_port: int = 8000):
+    """
+    Binds a raw TCP socket on 0.0.0.0:80 and responds to any HTTP GET/POST
+    with an HTTP/1.1 302 Found pointing to the AetherShield Captive Portal.
+    Runs in a daemon thread — safe to call multiple times (idempotent).
+    """
+    _started = getattr(start_port80_redirector, "_started", False)
+    if _started:
+        return
+    start_port80_redirector._started = True  # type: ignore
+
+    lan_ip = _detect_lan_ip()
+    redirect_url = f"http://{lan_ip}:{redirect_port}/captive/"
+
+    REDIRECT_RESPONSE = (
+        f"HTTP/1.1 302 Found\r\n"
+        f"Location: {redirect_url}\r\n"
+        f"Content-Length: 0\r\n"
+        f"Connection: close\r\n"
+        f"\r\n"
+    ).encode()
+
+    def _accept_loop(srv_sock: socket.socket):
+        while True:
+            try:
+                conn, addr = srv_sock.accept()
+            except Exception:
+                break
+            try:
+                # Drain the HTTP request (we don't care about its content)
+                conn.settimeout(1.0)
+                try:
+                    conn.recv(4096)
+                except Exception:
+                    pass
+                conn.sendall(REDIRECT_RESPONSE)
+            except Exception:
+                pass
+            finally:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
+    def _start():
+        try:
+            srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            srv.bind(("0.0.0.0", 80))
+            srv.listen(32)
+            log.info(f"[CaptivePortal] Port-80 redirector active → {redirect_url}")
+            print(f"[CAPTIVE PORTAL] Port 80 redirector → {redirect_url}")
+            _accept_loop(srv)
+        except PermissionError:
+            log.warning(
+                "[CaptivePortal] Cannot bind port 80 — run server as Administrator "
+                "to enable port-80 captive redirect."
+            )
+        except Exception as e:
+            log.error("[CaptivePortal] Port-80 redirector error: %s", e)
+
+    t = threading.Thread(target=_start, daemon=True, name="CaptivePort80")
+    t.start()
+
 
 captive_app = FastAPI(title="AetherShield Captive Portal")
 
