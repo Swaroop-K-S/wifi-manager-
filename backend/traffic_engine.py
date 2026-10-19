@@ -13,7 +13,7 @@ from backend.dns_server import LiveDNSServer
 from backend.real_activity_monitor import RealActivityMonitor
 from backend.sentinel_ai import sentinel_ai
 from backend.scheduler import god_scheduler
-from backend.device_fingerprinter import device_fingerprinter
+from backend.device_fingerprinter import device_fingerprinter, mdns_listener
 from backend.scapy_engine import live_sniffer
 from backend.packet_shaper import packet_shaper
 from backend.captive_portal import start_port80_redirector
@@ -297,6 +297,11 @@ class TrafficEngine:
             live_sniffer.start()
         except Exception as e:
             print("Scapy live sniffer start error:", e)
+
+        try:
+            mdns_listener.start()
+        except Exception as e:
+            print("mDNS listener start error:", e)
 
         try:
             packet_shaper.start()
