@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AETHER SHIELD // Wi-Fi God Mode Router Commander</title>
+  <meta name="description" content="Ultimate Wi-Fi Router God Mode Control Dashboard - Real-time device monitoring, data consumption, guest network isolation, and live browsing activity sniffer.">
+  <meta name="theme-color" content="#070b14">
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- Fonts: Outfit (Display), Inter (UI), JetBrains Mono (Telemetry/IPs) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Chart.js for real-time telemetry graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- QRCode library for instant phone connection -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="cyber-dark">
+
+  <!-- Ambient Glows -->
+  <div class="ambient-glow cyan-glow"></div>
+  <div class="ambient-glow purple-glow"></div>
+  <div class="grid-overlay"></div>
+
+  <!-- Notification Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <div class="app-layout">
+    
+    <!-- Top Header Bar -->
+    <header class="cyber-header">
+      <div class="header-left">
+        <div class="brand-logo">
+          <div class="radar-pulse">
+            <span class="pulse-ring"></span>
+            <span class="pulse-dot"></span>
+          </div>
+          <div class="brand-text">
+            <h1 class="logo-title">AETHER<span>SHIELD</span></h1>
+            <span class="logo-badge">WIFI-6 GOD MODE</span>
+          </div>
+        </div>
+
+        <div class="network-meta-pill">
+          <div class="meta-item">
+            <span class="meta-label">GATEWAY:</span>
+            <span id="header-gateway-ip" class="meta-value mono">192.168.1.1</span>
+          </div>
+          <div class="meta-divider"></div>
+          <div class="meta-item">
+            <span class="meta-label">ADMIN HOST:</span>
+            <span id="header-local-ip" class="meta-value mono">192.168.1.44</span>
+          </div>
+          <div class="meta-divider"></div>
+          <div class="meta-item status-live">
+            <span class="live-dot"></span>
+            <span id="ws-status-text">REALTIME SYNC</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button id="btn-rescan" class="cyber-btn btn-secondary" title="Scan physical ARP and ping all subnet slots">
+          <svg class="btn-icon spin-on-hover" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+          <span>RESCAN SUBNET</span>
+        </button>
+
+        <button id="btn-phone-qr" class="cyber-btn btn-phone" title="Open on Android Phone">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+            <line x1="12" y1="18" x2="12.01" y2="18"/>
+          </svg>
+          <span>ANDROID CONNECT</span>
+        </button>
+
+        <button id="btn-killswitch" class="cyber-btn btn-danger" title="Freeze internet on all non-admin devices">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          <span id="killswitch-text">FREEZE NETWORK</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Top KPI Telemetry Grid -->
+    <section class="kpi-grid">
+      
+      <!-- Metric 1: Download Bandwidth -->
+      <div class="kpi-card cyan-border">
+        <div class="kpi-header">
+          <span class="kpi-title">TOTAL DOWNLOAD</span>
+          <span class="kpi-badge cyan">LIVE SPEED</span>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-number-wrap">
+            <span id="kpi-dl-speed" class="kpi-number mono">0.0</span>
+            <span class="kpi-unit">Mbps</span>
+          </div>
+          <div class="kpi-subtext">
+            <span>Physical I/O today: </span>
+            <strong id="kpi-dl-total" class="mono">0.000 GB</strong>
+          </div>
+        </div>
+        <div class="kpi-graph-bar">
+          <div id="bar-dl-fill" class="bar-fill cyan-gradient" style="width: 45%;"></div>
+        </div>
+      </div>
+
+      <!-- Metric 2: Upload Bandwidth -->
+      <div class="kpi-card purple-border">
+        <div class="kpi-header">
+          <span class="kpi-title">TOTAL UPLOAD</span>
+          <span class="kpi-badge purple">LIVE SPEED</span>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-number-wrap">
+            <span id="kpi-ul-speed" class="kpi-number mono">0.0</span>
+            <span class="kpi-unit">Mbps</span>
+          </div>
+          <div class="kpi-subtext">
+            <span>Physical I/O today: </span>
+            <strong id="kpi-ul-total" class="mono">0.000 GB</strong>
+          </div>
+        </div>
+        <div class="kpi-graph-bar">
+          <div id="bar-ul-fill" class="bar-fill purple-gradient" style="width: 25%;"></div>
+        </div>
+      </div>
+
+      <!-- Metric 3: Connected Physical Devices -->
+      <div class="kpi-card emerald-border">
+        <div class="kpi-header">
+          <span class="kpi-title">CONNECTED CLIENTS</span>
+          <span class="kpi-badge emerald">MONITORED</span>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-number-wrap">
+            <span id="kpi-devices-count" class="kpi-number mono">0</span>
+            <span class="kpi-unit">Physical</span>
+          </div>
+          <div class="kpi-subtext">
+            <span id="kpi-blocked-count" class="text-danger mono">0 Blocked</span>
+            <span class="dot-separator">•</span>
+            <span id="kpi-guest-count-pill" class="mono text-cyan">0 Guests</span>
+          </div>
+        </div>
+        <div class="device-mini-icons" id="kpi-device-avatars"></div>
+      </div>
+
+      <!-- Metric 4: Real Live DNS & Port 53 Sniffer -->
+      <div class="kpi-card amber-border">
+        <div class="kpi-header">
+          <span class="kpi-title">LIVE DNS SINKHOLE</span>
+          <span class="kpi-badge amber">PORT 53 ACTIVE</span>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-number-wrap">
+            <span id="kpi-rules-count" class="kpi-number mono">4</span>
+            <span class="kpi-unit">Filters</span>
+          </div>
+          <div class="kpi-subtext">
+            <span class="shield-tag">UDP/53 Live</span>
+            <span class="shield-tag">DNS Sinkhole</span>
+            <span class="shield-tag">Guest Shield</span>
+          </div>
+        </div>
+        <div class="threat-status-strip">
+          <span class="pulse-secure"></span>
+          <span>Intercepting Real Packets & Sockets</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Navigation Tabs -->
+    <nav class="cyber-tabs">
+      <button class="tab-btn active" data-tab="tab-devices">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+        <span>PRIMARY DEVICES</span>
+        <span id="tab-badge-devices" class="tab-count-pill mono">0</span>
+      </button>
+
+      <!-- Guest Network Tab -->
+      <button class="tab-btn tab-btn-guest" data-tab="tab-guest">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <span>GUEST NETWORK</span>
+        <span id="tab-badge-guests" class="tab-count-pill mono">0</span>
+      </button>
+
+      <button class="tab-btn" data-tab="tab-activity">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+        <span>LIVE ACTIVITY ("WHAT THEY ACCESSED")</span>
+        <span class="live-stream-badge">LIVE DPI</span>
+      </button>
+
+      <button class="tab-btn" data-tab="tab-analytics">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        <span>BANDWIDTH & CHARTS</span>
+      </button>
+
+      <button class="tab-btn" data-tab="tab-firewall">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <span>FIREWALL & BLACKLIST</span>
+      </button>
+
+      <button class="tab-btn" data-tab="tab-android">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+          <line x1="12" y1="18" x2="12.01" y2="18"/>
+        </svg>
+        <span>ANDROID MOBILE APP</span>
+      </button>
+
+      <button class="tab-btn tab-btn-godmode" data-tab="tab-godmode">
+        <span style="font-size: 1.1rem; filter: drop-shadow(0 0 6px #f59e0b);">⚡</span>
+        <span style="color: #fbbf24; font-weight: 800;">SUPER GOD MODE</span>
+        <span class="live-stream-badge" style="background: rgba(245, 158, 11, 0.25); color: #fbbf24; border-color: rgba(245, 158, 11, 0.5);">RADAR & AI</span>
+      </button>
+    </nav>
+
+    <!-- Tab 1: Primary Devices Matrix -->
+    <main class="tab-content active" id="tab-devices">
+      <div class="content-toolbar">
+        <div class="search-input-wrap">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" id="device-search" placeholder="Search physical devices by Name, IP, MAC, or Vendor...">
+        </div>
+
+        <div class="filter-group">
+          <button class="filter-chip active" data-filter="all">All Devices</button>
+          <button class="filter-chip" data-filter="phone">Phones</button>
+          <button class="filter-chip" data-filter="laptop">Laptops/PCs</button>
+          <button class="filter-chip" data-filter="smart_tv">Smart TVs</button>
+          <button class="filter-chip" data-filter="blocked">Blocked</button>
+        </div>
+
+        <button id="btn-add-custom-dev" class="cyber-btn btn-secondary btn-sm">
+          <span>+ ADD TARGET IP</span>
+        </button>
+      </div>
+
+      <!-- Real Devices Grid Cards -->
+      <div class="devices-grid" id="devices-container"></div>
+    </main>
+
+    <!-- Tab: Guest Network Command Hub -->
+    <main class="tab-content" id="tab-guest">
+      
+      <!-- Guest Control & Policy Banner -->
+      <div class="guest-banner-card">
+        <div class="guest-banner-left">
+          <div class="guest-icon-badge">👥</div>
+          <div>
+            <h2>GUEST WI-FI NETWORK COMMAND</h2>
+            <p>Monitor guest visitors, isolate guests from your personal computers, and throttle guest speeds.</p>
+          </div>
+        </div>
+
+        <div class="guest-banner-actions">
+          <button id="btn-toggle-guest-net" class="cyber-btn btn-secondary">
+            <span>TOGGLE GUEST WI-FI</span>
+          </button>
+          <button id="btn-isolate-guest" class="cyber-btn btn-phone">
+            <span>LAN ISOLATION: ACTIVE</span>
+          </button>
+          <button id="btn-kick-all-guests" class="cyber-btn btn-danger">
+            <span>KICK ALL GUESTS</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Guest Telemetry Metrics -->
+      <div class="guest-stats-grid">
+        <div class="guest-stat-box">
+          <span class="guest-stat-label">CONNECTED GUESTS</span>
+          <div class="guest-stat-val mono" id="guest-stat-clients">0 Active</div>
+        </div>
+        <div class="guest-stat-box">
+          <span class="guest-stat-label">GUEST LIVE SPEED</span>
+          <div class="guest-stat-val mono text-cyan" id="guest-stat-speed">0.0 Mbps</div>
+        </div>
+        <div class="guest-stat-box">
+          <span class="guest-stat-label">TOTAL GUEST CONSUMPTION</span>
+          <div class="guest-stat-val mono text-purple" id="guest-stat-bytes">0.00 GB</div>
+        </div>
+        <div class="guest-stat-box">
+          <span class="guest-stat-label">BANDWIDTH CAP</span>
+          <div class="guest-stat-val mono text-emerald" id="guest-stat-cap">10 Mbps Cap</div>
+        </div>
+      </div>
+
+      <!-- Guest Devices Section -->
+      <div class="guest-section-header">
+        <h3>DEVICES ON GUEST NETWORK</h3>
+        <p>Phones and laptops currently assigned to the Guest Wi-Fi pool</p>
+      </div>
+
+      <div class="devices-grid" id="guest-devices-container">
+        <!-- Dynamically injected guest cards -->
+      </div>
+
+      <!-- Guest Activity Log: What Guests Are Doing -->
+      <div class="guest-activity-section">
+        <div class="guest-section-header">
+          <h3>WHAT GUESTS ARE ACCESSING (LIVE GUEST ACTIVITY)</h3>
+          <p>Real-time stream of domains, websites, and apps accessed by guest visitors</p>
+        </div>
+
+        <div class="stream-table-card">
+          <table class="stream-table">
+            <thead>
+              <tr>
+                <th>TIMESTAMP</th>
+                <th>GUEST DEVICE</th>
+                <th>GUEST IP</th>
+                <th>ACCESSED DOMAIN / URL</th>
+                <th>CATEGORY</th>
+                <th>PROTOCOL</th>
+                <th>STATUS</th>
+                <th>ACTION</th>
+              </tr>
+            </thead>
+            <tbody id="guest-activity-tbody">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Tab 2: Live Activity Stream (What They Accessed) -->
+    <main class="tab-content" id="tab-activity">
+      <div class="activity-header-bar">
+        <div class="stream-title-group">
+          <h2>DEEP PACKET & DOMAIN INSPECTOR</h2>
+          <p>Real-time telemetry of what every connected phone, TV, and PC is accessing on your Wi-Fi</p>
+        </div>
+        <div class="stream-controls">
+          <div class="search-input-wrap">
+            <input type="text" id="activity-search" placeholder="Filter by domain (e.g. youtube, instagram, tiktok)...">
+          </div>
+          <select id="activity-device-filter" class="cyber-select">
+            <option value="all">All Connected Devices</option>
+          </select>
+          <select id="activity-category-filter" class="cyber-select">
+            <option value="all">All Categories</option>
+            <option value="Streaming">Video & Streaming</option>
+            <option value="Social Media">Social Media</option>
+            <option value="Gaming">Gaming</option>
+            <option value="Dev & AI">Dev & AI</option>
+            <option value="Cloud & Storage">Cloud Storage</option>
+            <option value="DNS Query">DNS Lookups</option>
+          </select>
+          <button id="btn-clear-stream" class="cyber-btn btn-sm btn-ghost">Clear View</button>
+        </div>
+      </div>
+
+      <!-- Live Stream Table Container -->
+      <div class="stream-table-card">
+        <table class="stream-table">
+          <thead>
+            <tr>
+              <th>TIMESTAMP</th>
+              <th>CLIENT DEVICE</th>
+              <th>NETWORK</th>
+              <th>IP & PORT</th>
+              <th>ACCESSED DOMAIN / PROCESS</th>
+              <th>CATEGORY</th>
+              <th>PROTOCOL</th>
+              <th>GOD STATUS</th>
+              <th>ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody id="activity-stream-tbody"></tbody>
+        </table>
+      </div>
+    </main>
+
+    <!-- Tab 3: Bandwidth Analytics & Charts -->
+    <main class="tab-content" id="tab-analytics">
+      <div class="analytics-grid">
+        <div class="chart-card large-chart">
+          <div class="chart-card-header">
+            <div>
+              <h3>NETWORK THROUGHPUT (REALTIME)</h3>
+              <p>Live Inbound vs. Outbound bandwidth measured every second</p>
+            </div>
+            <div class="chart-legend">
+              <span class="legend-dot cyan"></span> <span>Download (Mbps)</span>
+              <span class="legend-dot purple"></span> <span>Upload (Mbps)</span>
+            </div>
+          </div>
+          <div class="chart-canvas-wrapper">
+            <canvas id="bandwidthChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card donut-chart">
+          <div class="chart-card-header">
+            <h3>TRAFFIC BY CATEGORY</h3>
+            <p>Bandwidth usage breakdown</p>
+          </div>
+          <div class="chart-canvas-wrapper donut-wrapper">
+            <canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card full-width-card">
+          <div class="chart-card-header">
+            <h3>TOP BANDWIDTH CONSUMING DEVICES</h3>
+            <p>Devices ranked by total data downloaded today</p>
+          </div>
+          <div class="leaderboard-list" id="leaderboard-container"></div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Tab 4: Firewall & Blacklist Rules -->
+    <main class="tab-content" id="tab-firewall">
+      <div class="firewall-grid">
+        <div class="firewall-card">
+          <h3>ADD GOD-MODE BLOCK RULE</h3>
+          <p>Blacklist specific domains or entire content categories across your router</p>
+          
+          <form id="form-add-rule" class="cyber-form">
+            <div class="form-group">
+              <label>RULE TYPE</label>
+              <div class="radio-toggle-group">
+                <label class="radio-label">
+                  <input type="radio" name="rule_type" value="domain" checked>
+                  <span>Domain / Website</span>
+                </label>
+                <label class="radio-label">
+                  <input type="radio" name="rule_type" value="category">
+                  <span>Category Lock</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="rule-target">TARGET TO BLOCK</label>
+              <input type="text" id="rule-target" placeholder="e.g. tiktok.com, roblox.com, or Adult" required>
+              <small class="form-hint">Drops DNS resolution to 0.0.0.0 and blocks access across the entire network.</small>
+            </div>
+
+            <div class="form-group">
+              <label for="rule-reason">REASON / NOTE</label>
+              <input type="text" id="rule-reason" placeholder="e.g. Excessive bandwidth / Parental control">
+            </div>
+
+            <button type="submit" class="cyber-btn btn-danger btn-block">
+              <span>ENFORCE BLOCK RULE</span>
+            </button>
+          </form>
+
+          <div class="presets-box">
+            <h4>QUICK SHIELD TOGGLES</h4>
+            <div class="preset-buttons-grid">
+              <button class="preset-btn" data-target="tiktok.com" data-type="domain">Block TikTok</button>
+              <button class="preset-btn" data-target="instagram.com" data-type="domain">Block Instagram Reels</button>
+              <button class="preset-btn" data-target="Adult" data-type="category">Block Adult Content</button>
+              <button class="preset-btn" data-target="Threat & P2P" data-type="category">Block Torrenting & P2P</button>
+              <button class="preset-btn" data-target="doubleclick.net" data-type="domain">Block Tracking Ads</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="firewall-card rules-list-card">
+          <h3>ACTIVE FIREWALL BLACKLIST</h3>
+          <p>All active drop rules enforced on the router gateway</p>
+          
+          <div class="rules-table-wrapper">
+            <table class="rules-table">
+              <thead>
+                <tr>
+                  <th>TYPE</th>
+                  <th>TARGET</th>
+                  <th>REASON</th>
+                  <th>STATUS</th>
+                  <th>ACTION</th>
+                </tr>
+              </thead>
+              <tbody id="rules-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Tab 5: Android Mobile App Link & PWA Setup -->
+    <main class="tab-content" id="tab-android">
+      <div class="android-section-card">
+        <div class="android-banner">
+          <div class="android-icon-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+              <line x1="12" y1="18" x2="12.01" y2="18"/>
+            </svg>
+          </div>
+          <div>
+            <h2>OPEN GOD MODE ON YOUR ANDROID PHONE</h2>
+            <p>Control your Wi-Fi, kick devices, and inspect live browsing directly from your phone!</p>
+          </div>
+        </div>
+
+        <div class="android-details-grid">
+          <div class="qr-container-card">
+            <h3>1. SCAN TO OPEN ON MOBILE</h3>
+            <p>Ensure your phone is connected to the same Wi-Fi network:</p>
+            <div class="qr-canvas-box" id="qrcode-box"></div>
+            <div class="mobile-url-box">
+              <span id="mobile-url-text" class="mono">http://192.168.1.44:8000</span>
+              <button id="btn-copy-url" class="cyber-btn btn-sm btn-ghost">COPY</button>
+            </div>
+          </div>
+
+          <div class="guide-container-card">
+            <h3>2. HOW TO INSTALL AS A NATIVE ANDROID APP</h3>
+            <ol class="step-list">
+              <li>
+                <strong>Open in Chrome on Android:</strong>
+                <p>Scan the QR code or type <code class="mono" id="mobile-guide-url">http://192.168.1.44:8000</code> in Chrome.</p>
+              </li>
+              <li>
+                <strong>Tap Menu (3 dots) & select "Add to Home screen" or "Install App":</strong>
+                <p>This installs <strong>AETHER SHIELD</strong> directly onto your Android app drawer with full screen mode.</p>
+              </li>
+              <li>
+                <strong>Route Phone DNS to PC (Optional for 100% Phone DNS Capture):</strong>
+                <p>In your Android Wi-Fi Settings -> Modify Network -> IP Settings (Static) -> Set <strong>DNS 1</strong> to <code class="mono">192.168.1.44</code>.</p>
+              </li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Tab 7: Super God Mode Radar & Automation Hub -->
+    <main class="tab-content" id="tab-godmode">
+      
+      <!-- Live Cyber Topology Radar Card -->
+      <div class="godmode-radar-card">
+        <div class="radar-card-header">
+          <div class="radar-title-group">
+            <div class="radar-icon-pulse">
+              <span class="radar-blip"></span>
+              <span style="font-size: 1.3rem;">🌐</span>
+            </div>
+            <div>
+              <h2 class="radar-title">INTERACTIVE CYBER TOPOLOGY RADAR</h2>
+              <p class="radar-subtitle">Omniscient RF link mapping & real-time telemetry between Fiber ONT Gateway and connected nodes</p>
+            </div>
+          </div>
+          <div class="radar-legend-bar">
+            <span class="legend-item"><span class="legend-dot dot-router"></span> Gateway Router</span>
+            <span class="legend-item"><span class="legend-dot dot-primary"></span> 5GHz / 2.4GHz Clients</span>
+            <span class="legend-item"><span class="legend-dot dot-guest"></span> Guest Network</span>
+            <span class="legend-item"><span class="legend-dot dot-blocked"></span> Quarantined / Paused</span>
+          </div>
+        </div>
+
+        <div class="radar-canvas-container" id="radar-canvas-container">
+          <canvas id="topologyCanvas"></canvas>
+          <div class="radar-hud-overlay">
+            <div class="hud-stat">
+              <span class="hud-label">CENTER FREQUENCY</span>
+              <span class="hud-val mono" id="hud-band">5.765 GHz (Ch 153)</span>
+            </div>
+            <div class="hud-stat">
+              <span class="hud-label">SURFACE NODES</span>
+              <span class="hud-val mono text-cyan" id="hud-nodes-count">0 Tracked</span>
+            </div>
+            <div class="hud-stat">
+              <span class="hud-label">RF POLARITY</span>
+              <span class="hud-val mono text-emerald">802.11ac MIMO</span>
+            </div>
+            <div class="hud-stat">
+              <span class="hud-label">RADAR SWEEP</span>
+              <span class="hud-val mono text-amber">ACTIVE (60 FPS)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Super God Mode Twin Columns -->
+      <div class="godmode-grid">
+        
+        <!-- Column 1: Sentinel AI Behavioral Engine -->
+        <div class="god-panel">
+          <div class="panel-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.2rem;">🧠</span>
+              <div>
+                <h3 class="panel-title">SENTINEL AI BEHAVIORAL FINGERPRINTING</h3>
+                <span class="panel-subtitle">Real-time deep socket cadence & payload signature analysis</span>
+              </div>
+            </div>
+            <span class="shield-tag" style="background: rgba(6,182,212,0.15); color: #38bdf8;">LIVE AI MODEL</span>
+          </div>
+
+          <div class="sentinel-feed" id="sentinel-device-list">
+            <!-- Populated via JS with real device behavioral inferences -->
+          </div>
+        </div>
+
+        <!-- Column 2: God Rules & Chronos Automation -->
+        <div class="god-panel">
+          <div class="panel-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.2rem;">⏰</span>
+              <div>
+                <h3 class="panel-title">CHRONOS GOD RULES & AUTOMATION</h3>
+                <span class="panel-subtitle">Scheduled time-of-day policies & captive quarantine enforcement</span>
+              </div>
+            </div>
+            <span class="shield-tag" style="background: rgba(245,158,11,0.15); color: #fbbf24;">POLICY ENGINE</span>
+          </div>
+
+          <div class="schedules-list" id="god-schedules-list">
+            <!-- Bedtime & Study mode cards -->
+            <div class="schedule-card">
+              <div class="schedule-info">
+                <div class="schedule-title-row">
+                  <span class="schedule-icon">🌙</span>
+                  <strong>Night Bedtime Internet Freeze</strong>
+                </div>
+                <p class="schedule-desc">Automatically pause Wi-Fi on all smartphones & tablets overnight.</p>
+                <div class="schedule-meta mono">
+                  <span>⏱️ 23:00 - 06:30</span>
+                  <span>• Target: Mobile Phones</span>
+                </div>
+              </div>
+              <div class="schedule-toggle-wrap">
+                <button class="cyber-btn btn-xs sched-btn" id="sched-btn-1" onclick="toggleScheduleRule(1)">TOGGLE RULE</button>
+              </div>
+            </div>
+
+            <div class="schedule-card">
+              <div class="schedule-info">
+                <div class="schedule-title-row">
+                  <span class="schedule-icon">📚</span>
+                  <strong>Afternoon Study Mode Focus</strong>
+                </div>
+                <p class="schedule-desc">Enforce strict social media and online gaming sinkhole block.</p>
+                <div class="schedule-meta mono">
+                  <span>⏱️ 16:00 - 19:00</span>
+                  <span>• Blacklist: Social & Gaming</span>
+                </div>
+              </div>
+              <div class="schedule-toggle-wrap">
+                <button class="cyber-btn btn-xs sched-btn" id="sched-btn-2" onclick="toggleScheduleRule(2)">TOGGLE RULE</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Captive Portal Quarantine Card -->
+          <div class="captive-preview-card" style="margin-top: 16px; padding: 14px 16px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <span style="font-size: 0.8rem; font-weight: 700; color: #ef4444; display: flex; align-items: center; gap: 6px;">
+                  🔒 CAPTIVE LOCKOUT PORTAL SCREEN
+                </span>
+                <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">
+                  Served automatically to quarantined devices when they browse the web.
+                </p>
+              </div>
+              <a href="/captive" target="_blank" class="cyber-btn btn-xs btn-danger" style="text-decoration: none;">
+                PREVIEW SCREEN ↗
+              </a>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- Device Inspector Drawer / Modal -->
+  <div id="device-modal" class="cyber-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-device-badge">
+          <div class="modal-avatar" id="modal-avatar">📱</div>
+          <div>
+            <h3 id="modal-device-name">Device Name</h3>
+            <span id="modal-device-ip" class="mono text-cyan">192.168.1.105</span>
+            <span class="dot-separator">•</span>
+            <span id="modal-device-mac" class="mono text-muted">70:70:8b:9a:11:c4</span>
+          </div>
+        </div>
+        <button id="modal-close" class="modal-close-btn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-actions-bar">
+          <div class="action-box">
+            <span class="action-label">INTERNET ACCESS</span>
+            <button id="modal-btn-pause" class="cyber-btn btn-sm btn-warning">PAUSE INTERNET</button>
+          </div>
+          <div class="action-box">
+            <span class="action-label">GOD MODE ISOLATION</span>
+            <button id="modal-btn-block" class="cyber-btn btn-sm btn-danger">KICK & BLOCK</button>
+          </div>
+          <div class="action-box">
+            <span class="action-label">ASSIGNED NETWORK</span>
+            <button id="modal-btn-switch-net" class="cyber-btn btn-sm btn-phone">MOVE TO GUEST</button>
+          </div>
+        </div>
+
+        <div class="modal-stats-grid">
+          <div class="stat-pill">
+            <span class="label">DEVICE TYPE</span>
+            <select id="modal-select-devtype" class="cyber-select" style="width: 100%; margin-top: 4px; padding: 4px 8px; font-size: 0.8rem;">
+              <option value="phone">📱 Smartphone</option>
+              <option value="laptop">💻 Laptop / PC</option>
+              <option value="tablet">📟 Tablet</option>
+              <option value="smart_tv">📺 Smart TV</option>
+              <option value="console">🎮 Gaming Console</option>
+              <option value="iot">💡 Smart Home / IoT</option>
+              <option value="router">🌐 Router Gateway</option>
+            </select>
+          </div>
+          <div class="stat-pill">
+            <span class="label">CONNECTION TYPE</span>
+            <strong id="modal-conn-type" class="text-cyan">Wi-Fi 5 (802.11ac)</strong>
+          </div>
+          <div class="stat-pill">
+            <span class="label">FREQUENCY BAND & CHANNEL</span>
+            <strong id="modal-band-channel" class="mono text-purple">5 GHz • Ch 153</strong>
+          </div>
+          <div class="stat-pill">
+            <span class="label">PHY NEGOTIATED LINK SPEED</span>
+            <strong id="modal-link-rate" class="mono text-emerald">866.7 Mbps</strong>
+          </div>
+          <div class="stat-pill">
+            <span class="label">SIGNAL STRENGTH</span>
+            <strong id="modal-signal" class="mono">94% (-40 dBm)</strong>
+          </div>
+          <div class="stat-pill">
+            <span class="label">TOTAL CONSUMED</span>
+            <strong id="modal-total-bytes" class="mono text-cyan">3.45 GB</strong>
+          </div>
+        </div>
+
+        <!-- Super God Mode: Artificial Latency / Lag Switch Shaper -->
+        <div class="modal-lag-switch-box" style="margin-top: 14px; padding: 14px 16px; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 0.82rem; font-weight: 700; color: #fbbf24; display: flex; align-items: center; gap: 6px;">
+              ⏱️ ARTIFICIAL LATENCY (LAG SWITCH)
+            </span>
+            <span id="modal-lag-value" class="mono text-amber" style="font-size: 0.85rem; font-weight: 800;">0 ms (Normal)</span>
+          </div>
+          <input type="range" id="modal-lag-slider" min="0" max="2000" step="50" value="0" style="width: 100%; accent-color: #f59e0b; cursor: pointer;">
+          <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.7rem; color: #64748b;" class="mono">
+            <span>0ms Fast</span>
+            <span>+150ms</span>
+            <span>+500ms</span>
+            <span>+1000ms</span>
+            <span>+2000ms RIP</span>
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
+            <button type="button" class="cyber-btn btn-xs preset-lag-btn" data-lag="0">0ms Normal</button>
+            <button type="button" class="cyber-btn btn-xs preset-lag-btn" data-lag="150">+150ms Jitter</button>
+            <button type="button" class="cyber-btn btn-xs preset-lag-btn" data-lag="500">+500ms High Lag</button>
+            <button type="button" class="cyber-btn btn-xs preset-lag-btn" data-lag="2000">+2000ms Unplayable</button>
+          </div>
+        </div>
+
+        <!-- Super God Mode: Sentinel AI Behavioral Profile -->
+        <div class="modal-sentinel-box" style="margin-top: 12px; padding: 12px 16px; background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <div style="font-size: 0.72rem; color: #64748b; font-weight: 700;">SENTINEL AI REAL-TIME INFERENCE</div>
+            <div id="modal-sentinel-app" style="font-size: 0.92rem; font-weight: 800; color: #38bdf8; margin-top: 2px;">
+              📱 Background Idle Sync
+            </div>
+          </div>
+          <div>
+            <span id="modal-sentinel-confidence" class="shield-tag" style="background: rgba(6,182,212,0.15); color: #38bdf8; font-weight: 700; font-size: 0.72rem;">95% CONFIDENCE</span>
+          </div>
+        </div>
+
+        <!-- Hardware Model & Company Identification -->
+        <div class="modal-identity-box" style="margin-top: 14px; padding: 14px 16px; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 0.82rem; font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
+              🏷️ HARDWARE COMPANY & MODEL IDENTIFIER
+            </span>
+            <span id="modal-brand-badge" class="shield-tag" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-weight: 800;">
+              SAMSUNG
+            </span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+            <div>
+              <label style="font-size: 0.7rem; color: #64748b; font-weight: 700;">COMPANY / BRAND</label>
+              <input type="text" id="modal-input-brand" placeholder="e.g. Samsung, Apple, OnePlus" class="cyber-input" style="width: 100%; margin-top: 4px; padding: 6px 10px; font-size: 0.82rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff;">
+            </div>
+            <div>
+              <label style="font-size: 0.7rem; color: #64748b; font-weight: 700;">EXACT MODEL NAME</label>
+              <input type="text" id="modal-input-model" placeholder="e.g. Galaxy M15 5G, SM-M156B" class="cyber-input" style="width: 100%; margin-top: 4px; padding: 6px 10px; font-size: 0.82rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff;">
+            </div>
+          </div>
+
+          <!-- Quick Presets -->
+          <div style="font-size: 0.68rem; color: #64748b; margin-bottom: 6px; font-weight: 700;">QUICK HARDWARE PRESETS:</div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
+            <button type="button" class="cyber-btn btn-xs preset-model-btn" data-brand="Samsung" data-model="Galaxy M15 5G" data-name="Samsung Galaxy M15 5G" data-type="phone">📱 Samsung Galaxy M15 5G</button>
+            <button type="button" class="cyber-btn btn-xs preset-model-btn" data-brand="Samsung" data-model="Galaxy S24 Ultra" data-name="Samsung Galaxy S24 Ultra" data-type="phone">📱 Samsung S24 Ultra</button>
+            <button type="button" class="cyber-btn btn-xs preset-model-btn" data-brand="Apple" data-model="iPhone 15 Pro" data-name="Apple iPhone 15 Pro" data-type="phone">📱 iPhone 15 Pro</button>
+            <button type="button" class="cyber-btn btn-xs preset-model-btn" data-brand="OnePlus" data-model="OnePlus 12R" data-name="OnePlus 12R 5G" data-type="phone">📱 OnePlus 12R</button>
+            <button type="button" class="cyber-btn btn-xs preset-model-btn" data-brand="Microsoft / PC" data-model="Windows 11 PC" data-name="This PC (Swaroop)" data-type="laptop">💻 Windows PC</button>
+          </div>
+
+          <button type="button" id="modal-btn-save-identify" class="cyber-btn btn-xs btn-primary" style="width: 100%; font-weight: 800; padding: 6px;">
+            SAVE COMPANY & MODEL IDENTIFICATION
+          </button>
+        </div>
+
+        <div class="modal-history-section">
+          <h4>DOMAINS & SITES ACCESSED BY THIS DEVICE</h4>
+          <div class="modal-history-list" id="modal-history-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Custom Device Modal -->
+  <div id="add-device-modal" class="cyber-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog modal-sm">
+      <div class="modal-header">
+        <h3>ADD TARGET DEVICE TO MONITOR</h3>
+        <button id="add-device-close" class="modal-close-btn">&times;</button>
+      </div>
+      <form id="form-add-device" class="cyber-form modal-form">
+        <div class="form-group">
+          <label>IP ADDRESS</label>
+          <input type="text" id="cust-ip" placeholder="e.g. 192.168.1.150" required>
+        </div>
+        <div class="form-group">
+          <label>MAC ADDRESS</label>
+          <input type="text" id="cust-mac" placeholder="e.g. ac:bc:32:00:11:22" required>
+        </div>
+        <div class="form-group">
+          <label>FRIENDLY NAME</label>
+          <input type="text" id="cust-name" placeholder="e.g. Kid's Phone, Guest Laptop" required>
+        </div>
+        <div class="form-group">
+          <label>ASSIGN NETWORK</label>
+          <select id="cust-network" class="cyber-select">
+            <option value="primary">Primary Wi-Fi Network</option>
+            <option value="guest">Guest Wi-Fi Network</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>DEVICE TYPE</label>
+          <select id="cust-type" class="cyber-select">
+            <option value="phone">Smartphone</option>
+            <option value="laptop">Laptop / PC</option>
+            <option value="smart_tv">Smart TV / Chromecast</option>
+            <option value="console">Gaming Console</option>
+            <option value="iot">Smart Home / IoT</option>
+          </select>
+        </div>
+        <button type="submit" class="cyber-btn btn-primary btn-block">REGISTER TARGET</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- QR Code Modal -->
+  <div id="qr-modal" class="cyber-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog modal-sm">
+      <div class="modal-header">
+        <h3>CONNECT YOUR ANDROID PHONE</h3>
+        <button id="qr-modal-close" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="qr-modal-body">
+        <p>Scan with your phone camera to open God Mode on your phone instantly:</p>
+        <div id="popup-qrcode-box" class="qr-canvas-box"></div>
+        <div class="mobile-url-box">
+          <span id="popup-mobile-url" class="mono"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Mobile Navigation Bar -->
+  <div class="mobile-bottom-nav">
+    <button class="mobile-nav-btn active" data-tab="tab-devices">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+        <line x1="8" y1="21" x2="16" y2="21"/>
+        <line x1="12" y1="17" x2="12" y2="21"/>
+      </svg>
+      <span>Devices</span>
+    </button>
+    <button class="mobile-nav-btn" data-tab="tab-guest">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+      </svg>
+      <span>Guests</span>
+    </button>
+    <button class="mobile-nav-btn" data-tab="tab-activity">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <span>Activity</span>
+    </button>
+    <button class="mobile-nav-btn" data-tab="tab-firewall">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      <span>God Mode</span>
+    </button>
+  </div>
+
+  <script src="/static/topology.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
