@@ -22,7 +22,7 @@ def get_local_ip():
         return "127.0.0.1"
 
 def print_banner(local_ip, port=8000):
-    banner = f"""
+    art = r"""
 ========================================================================
     ___    ______ _____ _    _ ______ _____     _____ _    _ _____ ______ _      _____  
    / _ \  |  ____|_   _| |  | |  ____|  __ \   / ____| |  | |_   _|  ____| |    |  __ \ 
@@ -47,7 +47,7 @@ def print_banner(local_ip, port=8000):
 ========================================================================
 [!] Press Ctrl+C in this terminal to shutdown.
 """
-    print(banner)
+    print(art.format(port=port, local_ip=local_ip))
 
 def open_browser(port=8000):
     time.sleep(1.2)

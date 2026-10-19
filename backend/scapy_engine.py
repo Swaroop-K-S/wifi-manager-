@@ -31,31 +31,55 @@ from backend.database import get_db
 def get_best_wifi_iface() -> str:
     """
     Finds the best active network interface in Scapy's Windows registry.
-    Prefers Wi-Fi/WLAN; falls back to Ethernet, then USB/RNDIS dongles.
-    Any interface with a 192.168.x.x address is accepted.
+    Priority 1: Matches the interface carrying the active default gateway IP (exact active adapter).
+    Priority 2: Physical Wi-Fi/WLAN adapter (excluding virtual Wi-Fi Direct / filter adapters).
+    Priority 3: Active Ethernet or USB/RNDIS dongles.
     """
     try:
         from scapy.arch.windows import get_windows_if_list
         ifaces = get_windows_if_list()
 
-        wifi_kw   = ["wi-fi", "wireless", "802.11", "mt7920", "wlan", "mediatek"]
-        eth_kw    = ["ethernet", "realtek", "gbe", "gigabit", "intel(r) ethernet"]
-        usb_kw    = ["rndis", "usb", "android", "remote ndis"]
+        # Step 1: Detect the active local route IP
+        active_ip = None
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            active_ip = s.getsockname()[0]
+            s.close()
+        except Exception:
+            pass
 
-        # Priority pass: Wi-Fi
+        # If active IP was detected, match the interface with that exact IP
+        if active_ip and active_ip != "127.0.0.1":
+            for iface in ifaces:
+                if active_ip in iface.get("ips", []):
+                    return iface.get("name", "Wi-Fi")
+
+        virtual_kw = ["virtual", "direct", "pseudo", "loopback", "wfp", "qos", "filter"]
+        wifi_kw    = ["wi-fi", "wireless", "802.11", "mt7920", "wlan", "mediatek"]
+        eth_kw     = ["ethernet", "realtek", "gbe", "gigabit", "intel(r) ethernet"]
+        usb_kw     = ["rndis", "usb", "android", "remote ndis"]
+
+        # Priority pass: Physical Wi-Fi (excluding virtual adapters)
         for iface in ifaces:
             desc = (iface.get("description") or "").lower()
             ips  = iface.get("ips", [])
             if any(ip.startswith("192.168.") for ip in ips):
+                if any(v in desc for v in virtual_kw):
+                    continue
                 if any(k in desc for k in wifi_kw):
                     return iface.get("name", "Wi-Fi")
+
         # Second pass: Ethernet
         for iface in ifaces:
             desc = (iface.get("description") or "").lower()
             ips  = iface.get("ips", [])
             if any(ip.startswith("192.168.") for ip in ips):
+                if any(v in desc for v in virtual_kw):
+                    continue
                 if any(k in desc for k in eth_kw):
                     return iface.get("name", "Ethernet")
+
         # Third pass: USB dongle / RNDIS
         for iface in ifaces:
             desc = (iface.get("description") or "").lower()

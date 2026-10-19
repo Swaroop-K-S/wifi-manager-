@@ -75,8 +75,8 @@ def start_port80_redirector(redirect_port: int = 8000):
             srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             srv.bind(("0.0.0.0", 80))
             srv.listen(32)
-            log.info(f"[CaptivePortal] Port-80 redirector active → {redirect_url}")
-            print(f"[CAPTIVE PORTAL] Port 80 redirector → {redirect_url}")
+            log.info(f"[CaptivePortal] Port-80 redirector active -> {redirect_url}")
+            print(f"[CAPTIVE PORTAL] Port 80 redirector -> {redirect_url}")
             _accept_loop(srv)
         except PermissionError:
             log.warning(

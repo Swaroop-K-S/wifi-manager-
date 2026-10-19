@@ -180,7 +180,7 @@ class MDNSDeviceListener:
                 browser = ServiceBrowser(self._zeroconf, svc, handlers=[self._on_service_state_change])
                 self._browsers.append(browser)
             log.info("[mDNS] Zeroconf listener active on %d service types.", len(MDNS_SERVICES))
-            print(f"[MDNS LISTENER] Zeroconf active — watching {len(MDNS_SERVICES)} service types")
+            print(f"[MDNS LISTENER] Zeroconf active - watching {len(MDNS_SERVICES)} service types")
             # Keep thread alive
             import time
             while self._running:
